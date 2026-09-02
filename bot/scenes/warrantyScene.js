@@ -15,7 +15,11 @@ warrantyScene.command('cancel', async (ctx) => {
 });
 
 // Lắng nghe chữ hoặc ảnh
-warrantyScene.on(['text', 'photo'], async (ctx) => {
+warrantyScene.on(['text', 'photo'], async (ctx, next) => {
+    if (ctx.message && ctx.message.text && ctx.message.text.startsWith('/')) {
+        ctx.scene.leave();
+        return next();
+    }
     const orderCode = ctx.session.orderCode || 'Không xác định';
     const username = ctx.from.username ? `@${ctx.from.username}` : ctx.from.first_name;
     const adminId = '5468270513'; // Thay bằng ID Admin thật (Nên đưa vào Settings)

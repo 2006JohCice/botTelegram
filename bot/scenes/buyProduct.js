@@ -171,8 +171,9 @@ buyProductScene.action(/^qty_(\d+)$/, async (ctx) => {
 });
 
 // Cho phép nhập số lượng bằng tay
-buyProductScene.on('text', async (ctx) => {
-    if (!ctx.session.awaitingQuantity) return;
+buyProductScene.on('text', async (ctx, next) => {
+    if (ctx.message.text && ctx.message.text.startsWith('/')) return next();
+    if (!ctx.session.awaitingQuantity) return next();
 
     const qtyText = ctx.message.text.trim();
     const qty = parseInt(qtyText);
@@ -465,6 +466,16 @@ buyProductScene.action('back_menu', async (ctx) => {
 // Route sang bảo hành (sẽ tạo Scene riêng)
 buyProductScene.action('warranty_req', (ctx) => {
     ctx.scene.enter('warranty_scene');
+});
+
+// Bắt các tin nhắn/lệnh không hợp lệ trong khi đang ở Menu
+buyProductScene.on('message', async (ctx, next) => {
+    if (ctx.message && ctx.message.text && ctx.message.text.startsWith('/')) {
+        await processCancellation(ctx);
+        ctx.scene.leave();
+        return next();
+    }
+    await ctx.reply('⚠️ Bạn đang thao tác trong Menu Mua Hàng. Vui lòng hoàn tất hoặc bấm nút [❌ Thoát] trước khi chat việc khác.');
 });
 
 module.exports = buyProductScene;
