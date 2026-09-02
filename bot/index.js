@@ -503,21 +503,35 @@ setInterval(async () => {
 }, 60000); // Quét mỗi 1 phút
 // ===================================================
 
-bot.launch()
-    .then(() => console.log('🤖 Bot đang chạy...'))
-    .catch((err) => console.error('❌ Lỗi khi khởi động Bot (Có thể do sai Token hoặc đang chạy trùng):', err));
+// ================= KHỞI CHẠY BOT (WEBHOOK HOẶC POLLING) =================
+const http = require('http');
+const port = process.env.PORT || 3000;
+const webhookPath = '/bot-webhook';
+
+http.createServer(async (req, res) => {
+    if (req.method === 'POST' && req.url === webhookPath) {
+        // Telegraf xử lý Webhook
+        return bot.webhookCallback(webhookPath)(req, res);
+    }
+    // Dummy response để Render kiểm tra health check
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('Telegram Bot is running smoothly!\n');
+}).listen(port, async () => {
+    console.log(`🚀 Web Server đang chạy ở cổng ${port}`);
+    
+    // Nếu chạy trên Render (có biến RENDER_EXTERNAL_URL), thiết lập Webhook tự động
+    const domain = process.env.RENDER_EXTERNAL_URL || process.env.WEBHOOK_DOMAIN;
+    if (domain) {
+        const fullUrl = `${domain}${webhookPath}`;
+        await bot.telegram.setWebhook(fullUrl);
+        console.log(`✅ Đã thiết lập Webhook tự động đánh thức Bot tại: ${fullUrl}`);
+    } else {
+        // Nếu chạy ở máy tính local (không có domain), fallback về Long-Polling
+        console.log('⚠️ Không tìm thấy tên miền. Chuyển sang chế độ Long-Polling cục bộ...');
+        bot.launch().catch(err => console.error('Lỗi Long-Polling:', err));
+    }
+});
 
 // Kích hoạt Graceful Stop
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
-
-// ================= DUMMY SERVER CHO RENDER =================
-// Cần một web server ảo để Render cho phép chạy miễn phí (dạng Web Service)
-const http = require('http');
-const port = process.env.PORT || 3000;
-http.createServer((req, res) => {
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('Telegram Bot is running smoothly!\n');
-}).listen(port, () => {
-    console.log(`🚀 Dummy Web Server đang chạy ở cổng ${port} để giữ Bot hoạt động trên Render!`);
-});
