@@ -1,0 +1,45 @@
+# ==========================================
+# NHỮNG FILE/THƯ MỤC KHÔNG ĐƯỢC TẢI LÊN (BỊ BỎ QUA)
+# ==========================================
+
+# 1. Thư mục chứa thư viện (Rất nặng, có thể tự cài lại bằng lệnh npm install)
+node_modules/
+*/node_modules/
+
+# 2. File chứa biến môi trường & mật khẩu (Bảo mật, TUYỆT ĐỐI KHÔNG TẢI LÊN)
+.env
+.env.*.local
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.pem
+
+# 3. Thư mục build của Frontend/Backend (Được tự động sinh ra khi deploy)
+dist/
+build/
+.next/
+out/
+
+# 4. File rác của hệ điều hành
+.DS_Store
+Thumbs.db
+
+# 5. File log (Nhật ký lỗi không cần thiết đẩy lên)
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 6. Cấu hình trình soạn thảo và AI (Code của bạn không cần những thứ này để chạy)
+.vscode/
+.idea/
+.agents/
+.gemini/
+
+# 7. File tạm do Bot tự sinh ra lúc tạo đơn hàng
+*.txt
+!requirements.txt
+tmp/
+temp/
