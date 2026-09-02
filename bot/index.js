@@ -491,3 +491,14 @@ bot.launch()
 // Kích hoạt Graceful Stop
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
+
+// ================= DUMMY SERVER CHO RENDER =================
+// Cần một web server ảo để Render cho phép chạy miễn phí (dạng Web Service)
+const http = require('http');
+const port = process.env.PORT || 3000;
+http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('Telegram Bot is running smoothly!\n');
+}).listen(port, () => {
+    console.log(`🚀 Dummy Web Server đang chạy ở cổng ${port} để giữ Bot hoạt động trên Render!`);
+});
