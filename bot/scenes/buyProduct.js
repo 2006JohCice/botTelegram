@@ -72,7 +72,12 @@ buyProductScene.action(/^cat_(.+)$/, async (ctx) => {
     const buttons = chunkArray(productButtons, 2);
     buttons.push([Markup.button.callback('⬅️ Quay lại Menu', 'back_menu')]);
 
-    await ctx.editMessageText('📦 <b>Chọn sản phẩm bên dưới 👇</b>', { parse_mode: 'HTML', ...Markup.inlineKeyboard(buttons) });
+    try {
+        await ctx.editMessageText('📦 <b>Chọn sản phẩm bên dưới 👇</b>', { parse_mode: 'HTML', ...Markup.inlineKeyboard(buttons) });
+    } catch (e) {
+        try { await ctx.deleteMessage(); } catch (err) {}
+        await ctx.reply('📦 <b>Chọn sản phẩm bên dưới 👇</b>', { parse_mode: 'HTML', ...Markup.inlineKeyboard(buttons) });
+    }
 });
 
 // BƯỚC 3: Chọn Số Lượng

@@ -37,10 +37,29 @@ const stage = new Scenes.Stage([buyProductScene, warrantyScene]);
 bot.use(session());
 bot.use(stage.middleware());
 
-// Bắt mọi lỗi xảy ra trong bot
-bot.catch((err, ctx) => {
+// Bắt mọi lỗi lọt lưới từ Telegraf
+bot.catch(async (err, ctx) => {
     console.error(`❌ Lỗi hệ thống khi xử lý ${ctx.updateType}:`, err);
+    try {
+        await ctx.reply('⚠️ Hệ thống đang gặp sự cố nhỏ hoặc đang quá tải. Vui lòng gõ /menu để thử lại nhé!', { reply_markup: { remove_keyboard: true } });
+        // Gửi thông báo cho Admin
+        const adminId = '5468270513';
+        const errMsg = err.message || err.toString();
+        await bot.telegram.sendMessage(adminId, `🚨 <b>CẢNH BÁO LỖI BOT</b>\nUpdate Type: ${ctx.updateType}\nLỗi: <code>${errMsg}</code>`, { parse_mode: 'HTML' });
+    } catch (e) {
+        console.error('Không thể gửi thông báo lỗi:', e);
+    }
 });
+
+// ================= BẢO VỆ CHỐNG CRASH NODE.JS =================
+// Nếu có lỗi Promise nào quên catch, Node.js sẽ không bị sập (Crash)
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('🔥 Lỗi Unhandled Rejection:', reason);
+});
+process.on('uncaughtException', (error) => {
+    console.error('🔥 Lỗi Uncaught Exception:', error);
+});
+// =============================================================
 
 // Lệnh /start
 bot.start(async (ctx) => {
