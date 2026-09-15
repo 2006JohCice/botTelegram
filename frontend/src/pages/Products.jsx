@@ -32,10 +32,10 @@ const Products = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [editingProduct, setEditingProduct] = useState(null);
   const [stockInput, setStockInput] = useState('');
-  
+
   const [editingItemId, setEditingItemId] = useState(null);
   const [editingItemData, setEditingItemData] = useState('');
-  
+
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [showEditIconPicker, setShowEditIconPicker] = useState(false);
 
@@ -72,7 +72,7 @@ const Products = () => {
 
   const handleAddStock = async () => {
     if (!stockInput.trim()) return;
-    
+
     const itemsToAdd = stockInput.split('\n').filter(line => line.trim() !== '').map(line => ({
       data: line.trim(),
       status: 'available'
@@ -220,11 +220,11 @@ const Products = () => {
     if (!show) return null;
     return (
       <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: '8px', zIndex: 99999, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)' }}>
-        <EmojiPicker 
+        <EmojiPicker
           onEmojiClick={(emojiData) => {
             onSelect(emojiData.emoji);
             onClose();
-          }} 
+          }}
           searchDisabled={true}
           skinTonesDisabled={true}
           width={300}
@@ -326,7 +326,7 @@ const Products = () => {
               })}
               {products.length === 0 && (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
+                  <td colSpan="12" style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
                     <BsBoxSeamFill size={32} style={{ opacity: 0.5, marginBottom: '16px' }} />
                     <p>Chưa có sản phẩm nào. Hãy tạo mới!</p>
                   </td>
@@ -342,12 +342,12 @@ const Products = () => {
         <div className="modal-overlay">
           <div className="glass-modal" style={{ width: '100%', maxWidth: '800px', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
             <h3 className="text-h3" style={{ marginBottom: '24px' }}>Kho Hàng: {selectedProduct.name}</h3>
-            
+
             <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', overflowY: 'auto', flex: 1, paddingRight: '8px' }}>
               {/* Nửa Nạp Thêm */}
               <div style={{ flex: 1, minWidth: '300px' }}>
                 <h4 style={{ marginBottom: '12px', color: 'var(--primary)', fontSize: '15px' }}>Nạp Thêm Tài Khoản</h4>
-                <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '12px' }}>Mỗi dòng là 1 item. Ví dụ:<br/><code style={{ background: 'var(--bg-color)', padding: '2px 4px', borderRadius: '4px' }}>user1|pass1</code></p>
+                <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '12px' }}>Mỗi dòng là 1 item. Ví dụ:<br /><code style={{ background: 'var(--bg-color)', padding: '2px 4px', borderRadius: '4px' }}>user1|pass1</code></p>
                 <textarea
                   className="input-field"
                   rows="5"
@@ -367,24 +367,24 @@ const Products = () => {
                   {selectedProduct.items && selectedProduct.items.map((item, index) => (
                     <div key={item._id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', background: 'var(--bg-color)', borderRadius: '8px' }}>
                       <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-muted)', width: '24px' }}>#{index + 1}</span>
-                      
+
                       {editingItemId === item._id ? (
-                         <div style={{ flex: 1, display: 'flex', gap: '8px' }}>
-                           <input type="text" className="input-field" value={editingItemData} onChange={e => setEditingItemData(e.target.value)} style={{ padding: '6px 8px', fontSize: '13px' }} />
-                           <button className="btn btn-primary" onClick={() => handleUpdateItem(selectedProduct._id, item._id)} style={{ padding: '6px 12px' }}><BsCheckCircle /></button>
-                           <button className="btn btn-secondary" onClick={() => setEditingItemId(null)} style={{ padding: '6px 12px' }}>X</button>
-                         </div>
+                        <div style={{ flex: 1, display: 'flex', gap: '8px' }}>
+                          <input type="text" className="input-field" value={editingItemData} onChange={e => setEditingItemData(e.target.value)} style={{ padding: '6px 8px', fontSize: '13px' }} />
+                          <button className="btn btn-primary" onClick={() => handleUpdateItem(selectedProduct._id, item._id)} style={{ padding: '6px 12px' }}><BsCheckCircle /></button>
+                          <button className="btn btn-secondary" onClick={() => setEditingItemId(null)} style={{ padding: '6px 12px' }}>X</button>
+                        </div>
                       ) : (
-                         <>
-                           <div style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '13px', fontFamily: 'monospace' }} title={typeof item.data === 'string' ? item.data : JSON.stringify(item.data)}>
-                             {typeof item.data === 'string' ? item.data : JSON.stringify(item.data)}
-                           </div>
-                           <div style={{ width: '60px', textAlign: 'center' }}>
-                             {item.status === 'sold' ? <span className="badge badge-danger" style={{fontSize:'10px', padding:'4px'}}>Đã Bán</span> : item.status === 'held' ? <span className="badge badge-warning" style={{fontSize:'10px', padding:'4px'}}>Tạm Giữ</span> : <span className="badge badge-success" style={{fontSize:'10px', padding:'4px'}}>Trống</span>}
-                           </div>
-                           <button onClick={() => { setEditingItemId(item._id); setEditingItemData(typeof item.data === 'string' ? item.data : JSON.stringify(item.data)); }} style={{ border: 'none', background: 'none', color: 'var(--primary)', cursor: 'pointer', padding: '4px' }} title="Sửa"><BsPencilSquare /></button>
-                           <button onClick={() => handleDeleteItem(selectedProduct._id, item._id)} style={{ border: 'none', background: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '4px' }} title="Xóa"><BsTrash /></button>
-                         </>
+                        <>
+                          <div style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '13px', fontFamily: 'monospace' }} title={typeof item.data === 'string' ? item.data : JSON.stringify(item.data)}>
+                            {typeof item.data === 'string' ? item.data : JSON.stringify(item.data)}
+                          </div>
+                          <div style={{ width: '60px', textAlign: 'center' }}>
+                            {item.status === 'sold' ? <span className="badge badge-danger" style={{ fontSize: '10px', padding: '4px' }}>Đã Bán</span> : item.status === 'held' ? <span className="badge badge-warning" style={{ fontSize: '10px', padding: '4px' }}>Tạm Giữ</span> : <span className="badge badge-success" style={{ fontSize: '10px', padding: '4px' }}>Trống</span>}
+                          </div>
+                          <button onClick={() => { setEditingItemId(item._id); setEditingItemData(typeof item.data === 'string' ? item.data : JSON.stringify(item.data)); }} style={{ border: 'none', background: 'none', color: 'var(--primary)', cursor: 'pointer', padding: '4px' }} title="Sửa"><BsPencilSquare /></button>
+                          <button onClick={() => handleDeleteItem(selectedProduct._id, item._id)} style={{ border: 'none', background: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '4px' }} title="Xóa"><BsTrash /></button>
+                        </>
                       )}
                     </div>
                   ))}
@@ -411,18 +411,18 @@ const Products = () => {
               <div style={{ display: 'flex', gap: '16px' }}>
                 <div style={{ flex: 2 }}>
                   <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '500' }}>Tên sản phẩm (*)</label>
-                  <input type="text" className="input-field" required value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})} />
+                  <input type="text" className="input-field" required value={newProduct.name} onChange={e => setNewProduct({ ...newProduct, name: e.target.value })} />
                 </div>
                 <div style={{ flex: 1 }}>
                   <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '500' }}>Giá tiền (VNĐ) (*)</label>
-                  <input type="number" className="input-field" required min="0" value={newProduct.price} onChange={e => setNewProduct({...newProduct, price: e.target.value})} />
+                  <input type="number" className="input-field" required min="0" value={newProduct.price} onChange={e => setNewProduct({ ...newProduct, price: e.target.value })} />
                 </div>
               </div>
-              
+
               <div style={{ display: 'flex', gap: '16px' }}>
                 <div style={{ flex: 1 }}>
                   <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '500' }}>Danh mục (*)</label>
-                  <select className="input-field" required value={newProduct.categoryId} onChange={e => setNewProduct({...newProduct, categoryId: e.target.value})}>
+                  <select className="input-field" required value={newProduct.categoryId} onChange={e => setNewProduct({ ...newProduct, categoryId: e.target.value })}>
                     <option value="">-- Chọn danh mục --</option>
                     {categories.map(c => (
                       <option key={c._id} value={c._id}>{c.name}</option>
@@ -431,7 +431,7 @@ const Products = () => {
                 </div>
                 <div style={{ flex: 1 }}>
                   <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '500' }}>Hình thức mua (*)</label>
-                  <select className="input-field" required value={newProduct.purchaseType} onChange={e => setNewProduct({...newProduct, purchaseType: e.target.value})}>
+                  <select className="input-field" required value={newProduct.purchaseType} onChange={e => setNewProduct({ ...newProduct, purchaseType: e.target.value })}>
                     <option value="direct">Mua trực tiếp</option>
                     <option value="contact_admin">Liên hệ Admin (Zalo)</option>
                   </select>
@@ -441,24 +441,24 @@ const Products = () => {
               <div>
                 <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '500' }}>Biểu tượng (Icon)</label>
                 <div style={{ position: 'relative' }}>
-                  <div 
+                  <div
                     onClick={() => setShowIconPicker(!showIconPicker)}
                     style={{ padding: '11px', background: 'white', border: '1px solid var(--border-color)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', cursor: 'pointer', transition: 'all 0.2s', width: '45px', boxSizing: 'border-box' }}
                   >
                     {getIconComponent(newProduct.icon)}
                   </div>
-                  <IconPickerPopover show={showIconPicker} onSelect={(icon) => setNewProduct({...newProduct, icon})} onClose={() => setShowIconPicker(false)} />
+                  <IconPickerPopover show={showIconPicker} onSelect={(icon) => setNewProduct({ ...newProduct, icon })} onClose={() => setShowIconPicker(false)} />
                 </div>
               </div>
 
               <div>
                 <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '500' }}>Mô tả ngắn</label>
-                <textarea rows="3" className="input-field" value={newProduct.description} onChange={e => setNewProduct({...newProduct, description: e.target.value})} />
+                <textarea rows="3" className="input-field" value={newProduct.description} onChange={e => setNewProduct({ ...newProduct, description: e.target.value })} />
               </div>
 
               <div>
                 <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '500' }}>Link ảnh sản phẩm (tuỳ chọn)</label>
-                <input type="text" className="input-field" value={newProduct.imageUrl} onChange={e => setNewProduct({...newProduct, imageUrl: e.target.value})} placeholder="https://..." />
+                <input type="text" className="input-field" value={newProduct.imageUrl} onChange={e => setNewProduct({ ...newProduct, imageUrl: e.target.value })} placeholder="https://..." />
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>
@@ -479,18 +479,18 @@ const Products = () => {
               <div style={{ display: 'flex', gap: '16px' }}>
                 <div style={{ flex: 2 }}>
                   <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '500' }}>Tên sản phẩm (*)</label>
-                  <input type="text" className="input-field" required value={editingProduct.name} onChange={e => setEditingProduct({...editingProduct, name: e.target.value})} />
+                  <input type="text" className="input-field" required value={editingProduct.name} onChange={e => setEditingProduct({ ...editingProduct, name: e.target.value })} />
                 </div>
                 <div style={{ flex: 1 }}>
                   <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '500' }}>Giá tiền (VNĐ) (*)</label>
-                  <input type="number" className="input-field" required min="0" value={editingProduct.price} onChange={e => setEditingProduct({...editingProduct, price: e.target.value})} />
+                  <input type="number" className="input-field" required min="0" value={editingProduct.price} onChange={e => setEditingProduct({ ...editingProduct, price: e.target.value })} />
                 </div>
               </div>
-              
+
               <div style={{ display: 'flex', gap: '16px' }}>
                 <div style={{ flex: 1 }}>
                   <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '500' }}>Danh mục (*)</label>
-                  <select className="input-field" required value={editingProduct.categoryId} onChange={e => setEditingProduct({...editingProduct, categoryId: e.target.value})}>
+                  <select className="input-field" required value={editingProduct.categoryId} onChange={e => setEditingProduct({ ...editingProduct, categoryId: e.target.value })}>
                     <option value="">-- Chọn danh mục --</option>
                     {categories.map(c => (
                       <option key={c._id} value={c._id}>{c.name}</option>
@@ -499,7 +499,7 @@ const Products = () => {
                 </div>
                 <div style={{ flex: 1 }}>
                   <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '500' }}>Hình thức mua (*)</label>
-                  <select className="input-field" required value={editingProduct.purchaseType} onChange={e => setEditingProduct({...editingProduct, purchaseType: e.target.value})}>
+                  <select className="input-field" required value={editingProduct.purchaseType} onChange={e => setEditingProduct({ ...editingProduct, purchaseType: e.target.value })}>
                     <option value="direct">Mua trực tiếp</option>
                     <option value="contact_admin">Liên hệ Admin (Zalo)</option>
                   </select>
@@ -509,24 +509,24 @@ const Products = () => {
               <div>
                 <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '500' }}>Biểu tượng (Icon)</label>
                 <div style={{ position: 'relative' }}>
-                  <div 
+                  <div
                     onClick={() => setShowEditIconPicker(!showEditIconPicker)}
                     style={{ padding: '11px', background: 'white', border: '1px solid var(--border-color)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', cursor: 'pointer', transition: 'all 0.2s', width: '45px', boxSizing: 'border-box' }}
                   >
                     {getIconComponent(editingProduct.icon)}
                   </div>
-                  <IconPickerPopover show={showEditIconPicker} onSelect={(icon) => setEditingProduct({...editingProduct, icon})} onClose={() => setShowEditIconPicker(false)} />
+                  <IconPickerPopover show={showEditIconPicker} onSelect={(icon) => setEditingProduct({ ...editingProduct, icon })} onClose={() => setShowEditIconPicker(false)} />
                 </div>
               </div>
 
               <div>
                 <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '500' }}>Mô tả ngắn</label>
-                <textarea rows="3" className="input-field" value={editingProduct.description} onChange={e => setEditingProduct({...editingProduct, description: e.target.value})} />
+                <textarea rows="3" className="input-field" value={editingProduct.description} onChange={e => setEditingProduct({ ...editingProduct, description: e.target.value })} />
               </div>
 
               <div>
                 <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '500' }}>Link ảnh sản phẩm (tuỳ chọn)</label>
-                <input type="text" className="input-field" value={editingProduct.imageUrl} onChange={e => setEditingProduct({...editingProduct, imageUrl: e.target.value})} placeholder="https://..." />
+                <input type="text" className="input-field" value={editingProduct.imageUrl} onChange={e => setEditingProduct({ ...editingProduct, imageUrl: e.target.value })} placeholder="https://..." />
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>

@@ -7,7 +7,10 @@ const Product = require('../../backend/models/Product');
 const User = require('../../backend/models/User');
 const Order = require('../../backend/models/Order');
 const Setting = require('../../backend/models/Setting');
+const Settings = require('../../backend/models/Settings');
+const ApiProvider = require('../../backend/models/ApiProvider');
 const Transaction = require('../../backend/models/Transaction');
+const https = require('https');
 
 const buyProductScene = new Scenes.BaseScene('buy_product_scene');
 
@@ -60,7 +63,7 @@ buyProductScene.action(/^cat_(.+)$/, async (ctx) => {
 
     const productButtons = products.map(p => {
         // Lấy số lượng available
-        const available = p.items.filter(i => i.status === 'available').length;
+        const available = p.source === 'api' ? p.stockCount : p.items.filter(i => i.status === 'available').length;
         const icon = p.icon || '📦';
         let priceStr = formatMoney(p.price);
         if (p.originalPrice && p.originalPrice > p.price) {
@@ -108,7 +111,7 @@ buyProductScene.action(/^prod_(.+)$/, async (ctx) => {
             return;
     }
 
-    const available = product.items.filter(i => i.status === 'available').length;
+    const available = product.source === 'api' ? product.stockCount : product.items.filter(i => i.status === 'available').length;
     if (available === 0) {
         return ctx.answerCbQuery('Sản phẩm này đã hết hàng!', { show_alert: true });
     }
@@ -124,7 +127,8 @@ buyProductScene.action(/^prod_(.+)$/, async (ctx) => {
         priceText = `💰 Giá: <s>${formatMoney(product.originalPrice)}</s> ➡️ <b>${formatMoney(product.price)}</b>`;
     }
 
-    const text = `🛒 <b>CHỌN SỐ LƯỢNG</b>\n\n📦 ${ctx.session.productName}\n${priceText}\n📊 Tồn kho: ${available}\n\nChọn số lượng bên dưới 👇 hoặc <b>nhắn tin số lượng</b> bạn muốn mua:`;
+    const stockDisplay = product.source === 'api' ? 'Sẵn hàng (Hệ thống đối tác)' : available;
+    const text = `🛒 <b>CHỌN SỐ LƯỢNG</b>\n\n📦 ${ctx.session.productName}\n${priceText}\n📊 Tồn kho: ${stockDisplay}\n\nChọn số lượng bên dưới 👇 hoặc <b>nhắn tin số lượng</b> bạn muốn mua:`;
     const buttons = [
         [
             Markup.button.callback('1', 'qty_1'),
@@ -208,53 +212,54 @@ buyProductScene.action('create_order', async (ctx) => {
 
     // Lock db/Hold inventory logic
     const product = await Product.findById(productId);
-    let availableItems = product.items.filter(i => i.status === 'available');
-    
-    if (availableItems.length < quantity) {
-        return ctx.answerCbQuery('Rất tiếc, đã có người mua trước, không đủ hàng!', { show_alert: true });
-    }
-
-    // Lấy N items
-    const itemsToHold = availableItems.slice(0, quantity);
-    const itemIdsToHold = availableItems.slice(0, quantity).map(i => i._id);
-    
+    let itemIdsToHold = [];
     const holdUntil = new Date(Date.now() + 10 * 60000);
-    
-    // Cập nhật Atomic (ngăn race condition)
-    await Product.updateOne(
-        { _id: productId },
-        { 
-            $set: { 
-                'items.$[elem].status': 'held',
-                'items.$[elem].heldUntil': holdUntil
-            }
-        },
-        { arrayFilters: [{ 'elem._id': { $in: itemIdsToHold }, 'elem.status': 'available' }] }
-    );
 
-    // Kiểm tra xem có lấy đủ số lượng hàng hay không bằng cách fetch lại
-    const updatedProduct = await Product.findById(productId);
-    const successfullyHeld = updatedProduct.items.filter(i => 
-        itemIdsToHold.some(id => id.equals(i._id)) && i.status === 'held' && i.heldUntil && i.heldUntil.getTime() === holdUntil.getTime()
-    );
-
-    if (successfullyHeld.length !== quantity) {
-        // Rollback lại các item đã lỡ giữ
-        if (successfullyHeld.length > 0) {
-            const heldIds = successfullyHeld.map(i => i._id);
-            await Product.updateOne(
-                { _id: productId },
-                { 
-                    $set: { 
-                        'items.$[elem].status': 'available',
-                        'items.$[elem].heldUntil': null
-                    }
-                },
-                { arrayFilters: [{ 'elem._id': { $in: heldIds }, 'elem.status': 'held' }] }
-            );
+    if (product.source !== 'api') {
+        let availableItems = product.items.filter(i => i.status === 'available');
+        
+        if (availableItems.length < quantity) {
+            return ctx.answerCbQuery('Rất tiếc, đã có người mua trước, không đủ hàng!', { show_alert: true });
         }
-        await ctx.reply('⚠️ Rất tiếc, hệ thống đang bận hoặc có khách khác vừa thanh toán sản phẩm này. Vui lòng thử lại sau giây lát!', { reply_markup: { remove_keyboard: true } });
-        return ctx.scene.leave();
+
+        itemIdsToHold = availableItems.slice(0, quantity).map(i => i._id);
+        
+        // Cập nhật Atomic (ngăn race condition)
+        await Product.updateOne(
+            { _id: productId },
+            { 
+                $set: { 
+                    'items.$[elem].status': 'held',
+                    'items.$[elem].heldUntil': holdUntil
+                }
+            },
+            { arrayFilters: [{ 'elem._id': { $in: itemIdsToHold }, 'elem.status': 'available' }] }
+        );
+
+        // Kiểm tra xem có lấy đủ số lượng hàng hay không bằng cách fetch lại
+        const updatedProduct = await Product.findById(productId);
+        const successfullyHeld = updatedProduct.items.filter(i => 
+            itemIdsToHold.some(id => id.equals(i._id)) && i.status === 'held' && i.heldUntil && i.heldUntil.getTime() === holdUntil.getTime()
+        );
+
+        if (successfullyHeld.length !== quantity) {
+            // Rollback lại các item đã lỡ giữ
+            if (successfullyHeld.length > 0) {
+                const heldIds = successfullyHeld.map(i => i._id);
+                await Product.updateOne(
+                    { _id: productId },
+                    { 
+                        $set: { 
+                            'items.$[elem].status': 'available',
+                            'items.$[elem].heldUntil': null
+                        }
+                    },
+                    { arrayFilters: [{ 'elem._id': { $in: heldIds }, 'elem.status': 'held' }] }
+                );
+            }
+            await ctx.reply('⚠️ Rất tiếc, hệ thống đang bận hoặc có khách khác vừa thanh toán sản phẩm này. Vui lòng thử lại sau giây lát!', { reply_markup: { remove_keyboard: true } });
+            return ctx.scene.leave();
+        }
     }
 
     const orderCode = 'ORDER' + crypto.randomBytes(4).toString('hex').toUpperCase() + Date.now().toString().slice(-4);
@@ -304,7 +309,9 @@ const processCancellation = async (ctx) => {
                     item.heldUntil = null;
                 }
             });
-            product.stockCount = product.items.filter(i => i.status === 'available').length;
+            if (product.source !== 'api') {
+                product.stockCount = product.items.filter(i => i.status === 'available').length;
+            }
             await product.save();
         }
         return true;
@@ -368,22 +375,155 @@ buyProductScene.action('pay_wallet', async (ctx) => {
     orderData += `- TỔNG TIỀN: ${formatMoney(order.totalPrice)}\n`;
     orderData += `-----------------------------------------\n`;
 
-    let itemIndex = 1;
-    product.items.forEach(item => {
-        if (order.items.includes(item._id)) {
-            item.status = 'sold';
-            item.soldTo = user._id;
-            item.soldAt = new Date();
-            // Nối data vào file text
-            if (order.quantity > 1) {
-                orderData += `------- ${itemIndex} -------\n`;
-            }
-            orderData += (typeof item.data === 'string' ? item.data : JSON.stringify(item.data)) + '\n';
-            itemIndex++;
+    if (product.source === 'api') {
+        let provider = null;
+        if (product.apiProviderId) {
+            provider = await ApiProvider.findById(product.apiProviderId);
         }
-    });
+
+        if (!provider) {
+            // Hoàn tiền nếu không tìm thấy cấu hình provider
+            user.balance += order.totalPrice;
+            await user.save();
+            order.status = 'cancelled';
+            await order.save();
+            return ctx.answerCbQuery('Lỗi hệ thống: Không tìm thấy nguồn API Đối tác. Đã hoàn tiền!', { show_alert: true });
+        }
+
+        const fetchPurchase = () => {
+            return new Promise((resolve, reject) => {
+                const url = new URL(provider.purchaseUrl);
+                
+                // Parse headers
+                let parsedHeaders = { 'Content-Type': 'application/json' };
+                if (provider.purchaseHeaders) {
+                    try { 
+                        let headerStr = provider.purchaseHeaders
+                            .replace(/\{\{orderCode\}\}/g, order.orderCode)
+                            .replace(/\{\{telegramId\}\}/g, user.telegramId);
+                        parsedHeaders = { ...parsedHeaders, ...JSON.parse(headerStr) }; 
+                    } catch(e){}
+                }
+
+                // Compile body template
+                let postData = '';
+                if (provider.purchaseBodyTemplate) {
+                    postData = provider.purchaseBodyTemplate
+                        .replace(/\{\{id\}\}/g, product.apiProductId)
+                        .replace(/\{\{qty\}\}/g, order.quantity);
+                }
+
+                if (provider.purchaseMethod === 'POST') {
+                    parsedHeaders['Content-Length'] = Buffer.byteLength(postData);
+                }
+
+                const reqOptions = {
+                    hostname: url.hostname,
+                    port: url.port || (url.protocol === 'https:' ? 443 : 80),
+                    path: url.pathname + url.search,
+                    method: provider.purchaseMethod || 'POST',
+                    headers: parsedHeaders
+                };
+                
+                const httpModule = url.protocol === 'https:' ? https : require('http');
+                const request = httpModule.request(reqOptions, (response) => {
+                    let responseBody = '';
+                    response.on('data', chunk => responseBody += chunk);
+                    response.on('end', () => {
+                        try {
+                            const data = JSON.parse(responseBody);
+                            resolve({ status: response.statusCode, data });
+                        } catch(e) {
+                            resolve({ success: false, message: 'Invalid JSON response from Partner' });
+                        }
+                    });
+                });
+                request.on('error', (e) => resolve({ success: false, message: e.message }));
+                
+                if (provider.purchaseMethod === 'POST' && postData) {
+                    request.write(postData);
+                }
+                request.end();
+            });
+        };
+
+        const apiResult = await fetchPurchase();
+        
+        // Nếu HTTP status không phải 200/201 thì coi như lỗi
+        if (!apiResult.status || apiResult.status < 200 || apiResult.status >= 300 || apiResult.success === false) {
+            // Hoàn tiền
+            user.balance += order.totalPrice;
+            await user.save();
+            order.status = 'cancelled';
+            await order.save();
+            await ctx.deleteMessage();
+            
+            const errMsg = apiResult.message || (apiResult.data && apiResult.data.message) || 'Lỗi không xác định từ đối tác';
+            return ctx.reply(`❌ Lỗi mua hàng từ Đối tác: ${errMsg}\n💰 Hệ thống đã hoàn lại ${formatMoney(order.totalPrice)} vào số dư ví của bạn.`, { reply_markup: { inline_keyboard: [[Markup.button.callback('⬅️ Quay lại Menu', 'menu_products')]] }});
+        }
+
+        // Đổ data account vào file text
+        let itemIndex = 1;
+        
+        // Trích xuất tài khoản dựa trên mapping
+        const getNestedField = (obj, path) => {
+            if (!path || path === '') return obj;
+            return path.split('.').reduce((acc, part) => acc && acc[part] !== undefined ? acc[part] : undefined, obj);
+        };
+        
+        const accountsArray = getNestedField(apiResult.data, provider.purchaseAccountListPath);
+        
+        if (Array.isArray(accountsArray) && accountsArray.length > 0) {
+            accountsArray.forEach(acc => {
+                if (order.quantity > 1) {
+                    orderData += `------- ${itemIndex} -------\n`;
+                }
+                
+                // Format tài khoản
+                let accountStr = provider.purchaseAccountFormat || '{{raw}}';
+                if (accountStr === '{{raw}}') {
+                    if (typeof acc === 'object') {
+                        accountStr = acc.raw || JSON.stringify(acc);
+                    } else {
+                        accountStr = acc;
+                    }
+                } else {
+                    // Nếu là object, replace các biến dạng {{field}}
+                    if (typeof acc === 'object') {
+                        const keys = Object.keys(acc);
+                        keys.forEach(k => {
+                            accountStr = accountStr.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), acc[k]);
+                        });
+                    }
+                }
+                
+                orderData += accountStr + '\n';
+                itemIndex++;
+            });
+        } else {
+             // Không tìm thấy tài khoản (chưa chắc là lỗi, có thể trả về string thẳng hoặc rỗng)
+             orderData += `Không tìm thấy tài khoản trả về. Vui lòng liên hệ Admin.\n`;
+             orderData += `Raw Data: ${JSON.stringify(apiResult.data)}\n`;
+        }
+    } else {
+        let itemIndex = 1;
+        product.items.forEach(item => {
+            if (order.items.includes(item._id)) {
+                item.status = 'sold';
+                item.soldTo = user._id;
+                item.soldAt = new Date();
+                // Nối data vào file text
+                if (order.quantity > 1) {
+                    orderData += `------- ${itemIndex} -------\n`;
+                }
+                orderData += (typeof item.data === 'string' ? item.data : JSON.stringify(item.data)) + '\n';
+                itemIndex++;
+            }
+        });
+        await product.save();
+    }
+    
     orderData += `-----------------------------------------\nCảm ơn quý khách!`;
-    await product.save();
 
     // Tạo file txt
     const filePath = path.join(__dirname, `../../${order.orderCode}.txt`);

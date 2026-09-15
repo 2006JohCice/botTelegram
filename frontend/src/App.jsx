@@ -1,10 +1,12 @@
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { BsGrid1X2Fill, BsFolderFill, BsBoxSeamFill, BsGearFill, BsRobot, BsMegaphoneFill } from 'react-icons/bs';
+import { BsGrid1X2Fill, BsFolderFill, BsBoxSeamFill, BsGearFill, BsRobot, BsMegaphoneFill, BsGlobe } from 'react-icons/bs';
 import Dashboard from './pages/Dashboard';
 import Products from './pages/Products';
 import Categories from './pages/Categories';
 import Settings from './pages/Settings';
 import Notifications from './pages/Notifications';
+import ApiStore from './pages/ApiStore';
+import ApiProviders from './pages/ApiProviders';
 import { DialogProvider } from './context/DialogContext';
 
 const SidebarContent = () => {
@@ -24,6 +26,8 @@ const SidebarContent = () => {
         <Link to="/" className={`nav-link ${path === '/' ? 'active' : ''}`}><BsGrid1X2Fill size={18} /> Dashboard</Link>
         <Link to="/categories" className={`nav-link ${path === '/categories' ? 'active' : ''}`}><BsFolderFill size={18} /> Danh mục</Link>
         <Link to="/products" className={`nav-link ${path === '/products' ? 'active' : ''}`}><BsBoxSeamFill size={18} /> Sản phẩm</Link>
+        <Link to="/api-providers" className={`nav-link ${path === '/api-providers' ? 'active' : ''}`}><BsGlobe size={18} /> Nguồn API</Link>
+        <Link to="/api-store" className={`nav-link ${path === '/api-store' ? 'active' : ''}`}><BsBoxSeamFill size={18} style={{color: 'var(--warning)'}} /> Cửa hàng API</Link>
         <Link to="/notifications" className={`nav-link ${path === '/notifications' ? 'active' : ''}`}><BsMegaphoneFill size={18} /> Thông báo</Link>
         <Link to="/settings" className={`nav-link ${path === '/settings' ? 'active' : ''}`}><BsGearFill size={18} /> Cài đặt</Link>
       </nav>
@@ -56,6 +60,8 @@ function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/categories" element={<Categories />} />
             <Route path="/products" element={<Products />} />
+            <Route path="/api-providers" element={<ApiProviders />} />
+            <Route path="/api-store" element={<ApiStore />} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>

@@ -18,6 +18,24 @@ const productSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    source: {
+        type: String,
+        enum: ['local', 'api'],
+        default: 'local'
+    },
+    apiProductId: {
+        type: String,
+        default: null
+    },
+    apiProviderId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'ApiProvider',
+        default: null
+    },
+    apiOriginalPrice: {
+        type: Number,
+        default: 0
+    },
     imageUrl: {
         type: String
     },
