@@ -70,7 +70,7 @@ router.get('/dashboard', async (req, res) => {
 // Lấy danh sách danh mục
 router.get('/categories', async (req, res) => {
     try {
-        const categories = await Category.find().sort({ createdAt: -1 });
+        const categories = await Category.find().sort({ order: 1, createdAt: 1 });
         res.json(categories);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -84,6 +84,24 @@ router.post('/categories', async (req, res) => {
         const newCategory = new Category({ name, description, icon: icon || '📁' });
         await newCategory.save();
         res.status(201).json(newCategory);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Reorder categories
+router.put('/categories/reorder', async (req, res) => {
+    try {
+        const { categories } = req.body; // Array of { id, order }
+        if (!Array.isArray(categories)) {
+            return res.status(400).json({ error: 'Invalid data format' });
+        }
+        
+        for (const item of categories) {
+            await Category.findByIdAndUpdate(item.id, { order: item.order });
+        }
+        
+        res.json({ success: true, message: 'Đã cập nhật vị trí danh mục' });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -774,13 +792,22 @@ router.get('/api-providers/:id/products', async (req, res) => {
             
             const isImported = id && !!localMap[id];
             
+            let partnerPrice = Number(getNestedField(item, provider.mappingPriceField)) || 0;
+            let localPrice = isImported ? localMap[id].price : partnerPrice;
+
+            // Tự động nâng giá: Nếu giá bán (localPrice) <= giá nhập (partnerPrice), 
+            // tự động cài giá bán = giá nhập + 30%
+            if (localPrice <= partnerPrice && partnerPrice > 0) {
+                 localPrice = Math.ceil(partnerPrice * 1.3);
+            }
+            
             return {
                 _id: id,
                 product_name: getNestedField(item, provider.mappingNameField),
-                pricing: getNestedField(item, provider.mappingPriceField),
+                pricing: partnerPrice,
                 stats: { available: getNestedField(item, provider.mappingStockField) },
                 isImported,
-                localPrice: isImported ? localMap[id].price : getNestedField(item, provider.mappingPriceField),
+                localPrice: localPrice,
                 localCategoryId: isImported ? localMap[id].categoryId : null,
                 localIsActive: isImported ? localMap[id].isActive : true
             };

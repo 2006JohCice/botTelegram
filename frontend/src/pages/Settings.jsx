@@ -1,10 +1,44 @@
-import React, { useState, useEffect } from 'react';
-import { BsGearFill, BsBank2, BsRobot, BsMegaphoneFill, BsSave, BsSendFill } from 'react-icons/bs';
+import React, { useState, useEffect, useCallback } from 'react';
+import { BsGearFill, BsBank2, BsRobot, BsSave } from 'react-icons/bs';
 import { useDialog } from '../context/DialogContext';
 import { API_URL } from '../config';
 
+// SettingRow phải nằm NGOÀI component Settings để tránh bị re-mount mất focus
+const SettingRow = React.memo(({ label, valueKey, description, placeholder, type = 'text', rows = 1, value, onChange, onSave }) => (
+  <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', padding: '16px 0', borderBottom: '1px solid var(--border-color)' }}>
+    <div style={{ flex: 1 }}>
+      <h4 style={{ margin: '0 0 4px 0', fontSize: '14px', fontWeight: '600' }}>{label}</h4>
+      <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)' }}>{description}</p>
+    </div>
+    <div style={{ flex: 2, display: 'flex', gap: '12px' }}>
+      {type === 'textarea' ? (
+        <textarea
+          className="input-field"
+          rows={rows}
+          value={value}
+          onChange={(e) => onChange(valueKey, e.target.value)}
+          placeholder={placeholder}
+          style={{ flex: 1 }}
+        />
+      ) : (
+        <input
+          type={type}
+          className="input-field"
+          value={value}
+          onChange={(e) => onChange(valueKey, e.target.value)}
+          placeholder={placeholder}
+          style={{ flex: 1 }}
+        />
+      )}
+      <button className="btn btn-secondary" onClick={() => onSave(valueKey, label)}>
+        <BsSave /> Lưu
+      </button>
+    </div>
+  </div>
+));
+
 const Settings = () => {
-  const { alert, confirm } = useDialog();
+  const { alert } = useDialog();
   const [settings, setSettings] = useState({
     WELCOME_MESSAGE: '',
     SEPAY_API_KEY: '',
@@ -13,17 +47,16 @@ const Settings = () => {
     BANK_ID: '',
     MIN_DEPOSIT: ''
   });
-  const [broadcastMessage, setBroadcastMessage] = useState('');
 
   const fetchSettings = async () => {
     try {
       const res = await fetch(`${API_URL}/api/settings`);
       const data = await res.json();
-      const newSettings = { ...settings };
+      const newSettings = {};
       data.forEach(item => {
         newSettings[item.key] = item.value;
       });
-      setSettings(newSettings);
+      setSettings(prev => ({ ...prev, ...newSettings }));
     } catch (err) {
       console.error(err);
     }
@@ -33,11 +66,11 @@ const Settings = () => {
     fetchSettings();
   }, []);
 
-  const handleChange = (key, value) => {
-    setSettings({ ...settings, [key]: value });
-  };
+  const handleChange = useCallback((key, value) => {
+    setSettings(prev => ({ ...prev, [key]: value }));
+  }, []);
 
-  const handleSave = async (key, description = '') => {
+  const handleSave = useCallback(async (key, description = '') => {
     try {
       const res = await fetch(`${API_URL}/api/settings`, {
         method: 'POST',
@@ -51,41 +84,7 @@ const Settings = () => {
       console.error(err);
       alert('Lỗi lưu cấu hình');
     }
-  };
-
-
-  const SettingRow = ({ label, valueKey, description, placeholder, type = 'text', rows = 1 }) => (
-    <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', padding: '16px 0', borderBottom: '1px solid var(--border-color)' }}>
-      <div style={{ flex: 1 }}>
-        <h4 style={{ margin: '0 0 4px 0', fontSize: '14px', fontWeight: '600' }}>{label}</h4>
-        <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)' }}>{description}</p>
-      </div>
-      <div style={{ flex: 2, display: 'flex', gap: '12px' }}>
-        {type === 'textarea' ? (
-          <textarea
-            className="input-field"
-            rows={rows}
-            value={settings[valueKey] || ''}
-            onChange={(e) => handleChange(valueKey, e.target.value)}
-            placeholder={placeholder}
-            style={{ flex: 1 }}
-          />
-        ) : (
-          <input
-            type={type}
-            className="input-field"
-            value={settings[valueKey] || ''}
-            onChange={(e) => handleChange(valueKey, e.target.value)}
-            placeholder={placeholder}
-            style={{ flex: 1 }}
-          />
-        )}
-        <button className="btn btn-secondary" onClick={() => handleSave(valueKey, label)}>
-          <BsSave /> Lưu
-        </button>
-      </div>
-    </div>
-  );
+  }, [settings, alert]);
 
   return (
     <div>
@@ -106,18 +105,27 @@ const Settings = () => {
             valueKey="BANK_ID" 
             description="Mã ngân hàng (ví dụ: TCB, VCB, MB)"
             placeholder="TCB" 
+            value={settings.BANK_ID || ''}
+            onChange={handleChange}
+            onSave={handleSave}
           />
           <SettingRow 
             label="Số Tài Khoản" 
             valueKey="BANK_ACCOUNT_NUMBER" 
             description="Số tài khoản nhận tiền"
             placeholder="0123456789" 
+            value={settings.BANK_ACCOUNT_NUMBER || ''}
+            onChange={handleChange}
+            onSave={handleSave}
           />
           <SettingRow 
             label="Tên Chủ Tài Khoản" 
             valueKey="BANK_ACCOUNT_NAME" 
             description="Tên in trên thẻ (không dấu)"
             placeholder="NGUYEN VAN A" 
+            value={settings.BANK_ACCOUNT_NAME || ''}
+            onChange={handleChange}
+            onSave={handleSave}
           />
           <SettingRow 
             label="Mức Nạp Tối Thiểu" 
@@ -125,12 +133,18 @@ const Settings = () => {
             description="Số tiền nạp tối thiểu (VNĐ)"
             placeholder="VD: 10000" 
             type="number"
+            value={settings.MIN_DEPOSIT || ''}
+            onChange={handleChange}
+            onSave={handleSave}
           />
           <SettingRow 
             label="SePay API Key" 
             valueKey="SEPAY_API_KEY" 
             description="Mã API lấy từ SePay.vn"
             placeholder="Nhập API Key cung cấp sau..." 
+            value={settings.SEPAY_API_KEY || ''}
+            onChange={handleChange}
+            onSave={handleSave}
           />
         </div>
 
@@ -147,9 +161,11 @@ const Settings = () => {
             placeholder="Xin chào!..." 
             type="textarea"
             rows={4}
+            value={settings.WELCOME_MESSAGE || ''}
+            onChange={handleChange}
+            onSave={handleSave}
           />
         </div>
-
 
       </div>
     </div>

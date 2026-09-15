@@ -4,6 +4,8 @@ import { BsBoxSeamFill, BsFolderFill, BsTagsFill, BsController, BsDisplayFill, B
 import { useDialog } from '../context/DialogContext';
 import { API_URL } from '../config';
 import EmojiPicker from 'emoji-picker-react';
+import DataTableTools from '../components/DataTableTools';
+import Pagination from '../components/Pagination';
 
 const ICON_OPTIONS = [
   { name: 'Box', icon: <BsBoxSeamFill /> },
@@ -46,6 +48,12 @@ const Products = () => {
   const [discountPercent, setDiscountPercent] = useState('');
   const [sendNotification, setSendNotification] = useState(true);
   const [notificationMessage, setNotificationMessage] = useState('');
+
+  // Pagination & Search states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterCategory, setFilterCategory] = useState('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const fetchData = async () => {
     try {
@@ -234,6 +242,22 @@ const Products = () => {
     );
   };
 
+  // Filter & Pagination logic
+  const filteredProducts = products.filter(p => {
+    const matchSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchCategory = filterCategory === 'ALL' || (p.categoryId && p.categoryId._id === filterCategory) || p.categoryId === filterCategory;
+    return matchSearch && matchCategory;
+  });
+  
+  const totalItems = filteredProducts.length;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const currentProducts = filteredProducts.slice(startIndex, startIndex + itemsPerPage);
+
+  // Reset trang về 1 khi đổi bộ lọc
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterCategory]);
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
@@ -257,7 +281,19 @@ const Products = () => {
         </div>
       </div>
 
-      <div className="glass-panel" style={{ padding: '24px' }}>
+      <div className="glass-panel" style={{ padding: '24px', marginBottom: '24px' }}>
+        <DataTableTools 
+          searchPlaceholder="Tìm kiếm sản phẩm..."
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          filterOptions={[
+            { label: 'Tất cả danh mục', value: 'ALL' },
+            ...categories.map(c => ({ label: c.name, value: c._id }))
+          ]}
+          filterValue={filterCategory}
+          onFilterChange={setFilterCategory}
+        />
+
         <div style={{ overflowX: 'auto' }}>
           <table className="data-table">
             <thead>
@@ -272,7 +308,7 @@ const Products = () => {
               </tr>
             </thead>
             <tbody>
-              {products.map(p => {
+              {currentProducts.map(p => {
                 const available = p.items ? p.items.filter(i => i.status === 'available').length : 0;
                 return (
                   <tr key={p._id}>
@@ -324,7 +360,7 @@ const Products = () => {
                   </tr>
                 );
               })}
-              {products.length === 0 && (
+              {filteredProducts.length === 0 && (
                 <tr>
                   <td colSpan="12" style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
                     <BsBoxSeamFill size={32} style={{ opacity: 0.5, marginBottom: '16px' }} />
@@ -335,6 +371,13 @@ const Products = () => {
             </tbody>
           </table>
         </div>
+
+        <Pagination 
+          currentPage={currentPage}
+          totalItems={totalItems}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+        />
       </div>
 
       {/* Modal Nạp Kho & Quản lý Kho */}

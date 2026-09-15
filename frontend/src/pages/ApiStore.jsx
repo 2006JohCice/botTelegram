@@ -4,6 +4,8 @@ import { BsBoxSeamFill, BsCloudDownload, BsCheckCircleFill, BsGlobe } from 'reac
 import { useDialog } from '../context/DialogContext';
 import { API_URL } from '../config';
 import { Link } from 'react-router-dom';
+import DataTableTools from '../components/DataTableTools';
+import Pagination from '../components/Pagination';
 
 const ApiStore = () => {
   const { alert, confirm } = useDialog();
@@ -14,6 +16,12 @@ const ApiStore = () => {
   const [categories, setCategories] = useState([]);
   const [currency, setCurrency] = useState('VND');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Pagination & Search states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const fetchProviders = async () => {
     try {
@@ -110,6 +118,24 @@ const ApiStore = () => {
     setProducts(products.map(p => p._id === productId ? { ...p, [field]: value } : p));
   };
 
+  // Filter & Pagination logic
+  const filteredProducts = products.filter(p => {
+    const matchSearch = p.product_name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchStatus = filterStatus === 'ALL' || 
+                        (filterStatus === 'IMPORTED' && p.isImported) || 
+                        (filterStatus === 'NOT_IMPORTED' && !p.isImported);
+    return matchSearch && matchStatus;
+  });
+  
+  const totalItems = filteredProducts.length;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const currentProducts = filteredProducts.slice(startIndex, startIndex + itemsPerPage);
+
+  // Reset trang về 1 khi đổi bộ lọc
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterStatus]);
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
@@ -147,6 +173,19 @@ const ApiStore = () => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h3 className="text-h3" style={{ margin: 0 }}>Danh sách Sản phẩm từ API</h3>
           </div>
+
+          <DataTableTools 
+            searchPlaceholder="Tìm kiếm sản phẩm API..."
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            filterOptions={[
+              { label: 'Tất cả trạng thái', value: 'ALL' },
+              { label: 'Đã lên kệ', value: 'IMPORTED' },
+              { label: 'Chưa lên kệ', value: 'NOT_IMPORTED' }
+            ]}
+            filterValue={filterStatus}
+            onFilterChange={setFilterStatus}
+          />
           
           {isLoading ? (
             <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>Đang lấy dữ liệu từ đối tác...</div>
@@ -164,7 +203,7 @@ const ApiStore = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {products.map(p => (
+                  {currentProducts.map(p => (
                     <tr key={p._id}>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -190,11 +229,22 @@ const ApiStore = () => {
                       </td>
                       <td>
                         <input 
-                          type="number" 
+                          type="text" 
+                          inputMode="numeric"
                           className="input-field" 
                           style={{ padding: '6px 12px', width: '120px' }}
-                          value={p.localPrice || p.pricing}
-                          onChange={e => handleFieldChange(p._id, 'localPrice', Number(e.target.value))}
+                          value={p.localPrice !== undefined && p.localPrice !== null && p.localPrice !== '' ? p.localPrice : p.pricing}
+                          onChange={e => {
+                            const val = e.target.value;
+                            if (val === '' || /^\d*$/.test(val)) {
+                              handleFieldChange(p._id, 'localPrice', val === '' ? '' : Number(val));
+                            }
+                          }}
+                          onBlur={e => {
+                            if (e.target.value === '' || e.target.value === '0') {
+                              handleFieldChange(p._id, 'localPrice', p.pricing);
+                            }
+                          }}
                         />
                       </td>
                       <td>
@@ -231,17 +281,26 @@ const ApiStore = () => {
                       </td>
                     </tr>
                   ))}
-                  {products.length === 0 && (
+                  {filteredProducts.length === 0 && (
                     <tr>
                       <td colSpan="6" style={{ padding: '48px', textAlign: 'center', color: 'var(--text-muted)' }}>
                         <BsBoxSeamFill size={32} style={{ opacity: 0.5, marginBottom: '16px' }} />
-                        <p>Không có sản phẩm nào từ API này hoặc kết nối thất bại.</p>
+                        <p>Không có sản phẩm nào hoặc không tìm thấy kết quả.</p>
                       </td>
                     </tr>
                   )}
                 </tbody>
               </table>
             </div>
+          )}
+
+          {!isLoading && (
+            <Pagination 
+              currentPage={currentPage}
+              totalItems={totalItems}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+            />
           )}
         </div>
       )}

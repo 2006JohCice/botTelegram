@@ -29,7 +29,7 @@ const chunkArray = (arr, size) => arr.length ? [arr.slice(0, size), ...chunkArra
 // BƯỚC 1: Chọn Danh Mục
 buyProductScene.enter(async (ctx) => {
     try {
-        const categories = await Category.find({ isActive: true });
+        const categories = await Category.find({ isActive: true }).sort({ order: 1, createdAt: 1 });
         if (categories.length === 0) {
             await ctx.reply('Hiện tại chưa có danh mục nào.');
             return ctx.scene.leave();
@@ -127,8 +127,7 @@ buyProductScene.action(/^prod_(.+)$/, async (ctx) => {
         priceText = `💰 Giá: <s>${formatMoney(product.originalPrice)}</s> ➡️ <b>${formatMoney(product.price)}</b>`;
     }
 
-    const stockDisplay = product.source === 'api' ? 'Sẵn hàng (Hệ thống đối tác)' : available;
-    const text = `🛒 <b>CHỌN SỐ LƯỢNG</b>\n\n📦 ${ctx.session.productName}\n${priceText}\n📊 Tồn kho: ${stockDisplay}\n\nChọn số lượng bên dưới 👇 hoặc <b>nhắn tin số lượng</b> bạn muốn mua:`;
+    const text = `🛒 <b>CHỌN SỐ LƯỢNG</b>\n\n📦 ${ctx.session.productName}\n${priceText}\n📊 Tồn kho: ${available}\n\nChọn số lượng bên dưới 👇 hoặc <b>nhắn tin số lượng</b> bạn muốn mua:`;
     const buttons = [
         [
             Markup.button.callback('1', 'qty_1'),
@@ -459,7 +458,11 @@ buyProductScene.action('pay_wallet', async (ctx) => {
             await ctx.deleteMessage();
             
             const errMsg = apiResult.message || (apiResult.data && apiResult.data.message) || 'Lỗi không xác định từ đối tác';
-            return ctx.reply(`❌ Lỗi mua hàng từ Đối tác: ${errMsg}\n💰 Hệ thống đã hoàn lại ${formatMoney(order.totalPrice)} vào số dư ví của bạn.`, { reply_markup: { inline_keyboard: [[Markup.button.callback('⬅️ Quay lại Menu', 'menu_products')]] }});
+            console.error(`[Partner API Error] Order: ${order.orderCode} - Product: ${product.name} - Error: ${errMsg}`);
+            
+            const textMsg = `❌ <b>Lỗi mua hàng từ Hệ thống</b>\nSản phẩm này hiện đang gặp sự cố tạm thời. Vui lòng liên hệ Admin qua Zalo: <b><a href="https://zalo.me/0569847809">0569847809</a></b> để được hỗ trợ mua trực tiếp.\n\n💰 Hệ thống đã hoàn lại <b>${formatMoney(order.totalPrice)}</b> vào số dư ví của bạn.`;
+            
+            return ctx.reply(textMsg, { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[Markup.button.callback('⬅️ Quay lại Menu', 'menu_products')]] }});
         }
 
         // Đổ data account vào file text
