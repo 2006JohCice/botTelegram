@@ -127,7 +127,12 @@ buyProductScene.action(/^prod_(.+)$/, async (ctx) => {
         priceText = `💰 Giá: <s>${formatMoney(product.originalPrice)}</s> ➡️ <b>${formatMoney(product.price)}</b>`;
     }
 
-    const text = `🛒 <b>CHỌN SỐ LƯỢNG</b>\n\n📦 ${ctx.session.productName}\n${priceText}\n📊 Tồn kho: ${available}\n\nChọn số lượng bên dưới 👇 hoặc <b>nhắn tin số lượng</b> bạn muốn mua:`;
+    let descriptionText = '';
+    if (product.description) {
+        descriptionText = `\n📝 Mô tả: <i>${escapeHTML(product.description)}</i>\n`;
+    }
+
+    const text = `🛒 <b>CHỌN SỐ LƯỢNG</b>\n\n📦 ${ctx.session.productName}\n${priceText}\n📊 Tồn kho: ${available}\n${descriptionText}\nChọn số lượng bên dưới 👇 hoặc <b>nhắn tin số lượng</b> bạn muốn mua:`;
     const buttons = [
         [
             Markup.button.callback('1', 'qty_1'),
@@ -460,7 +465,22 @@ buyProductScene.action('pay_wallet', async (ctx) => {
             const errMsg = apiResult.message || (apiResult.data && apiResult.data.message) || 'Lỗi không xác định từ đối tác';
             console.error(`[Partner API Error] Order: ${order.orderCode} - Product: ${product.name} - Error: ${errMsg}`);
             
-            const textMsg = `❌ <b>Lỗi mua hàng từ Hệ thống</b>\nSản phẩm này hiện đang gặp sự cố tạm thời. Vui lòng liên hệ Admin qua Zalo: <b><a href="https://zalo.me/0569847809">0569847809</a></b> để được hỗ trợ mua trực tiếp.\n\n💰 Hệ thống đã hoàn lại <b>${formatMoney(order.totalPrice)}</b> vào số dư ví của bạn.`;
+            // Thông báo cho Admin biết có lỗi khi mua API
+            const adminId = '5468270513';
+            const adminAlertMsg = `🚨 <b>CẢNH BÁO LỖI MUA HÀNG ĐỐI TÁC (API)</b>
+Mã đơn: <code>${order.orderCode}</code>
+Khách hàng: ${user.firstName || ''} ${user.lastName || ''} (@${user.username || 'Không có'})
+Sản phẩm: <b>${product.name}</b>
+Đối tác: ${provider.name || 'Không xác định'}
+Chi tiết lỗi: <code>${errMsg}</code>
+Trạng thái: <b>Đã tự động hoàn tiền cho khách</b>.`;
+            try {
+                await ctx.telegram.sendMessage(adminId, adminAlertMsg, { parse_mode: 'HTML' });
+            } catch (notifyErr) {
+                console.error('Không thể nhắn tin cho Admin:', notifyErr.message);
+            }
+            
+            const textMsg = `❌ <b>Lỗi mua hàng từ Hệ thống</b>\nSản phẩm này hiện đang gặp sự cố tạm thời (Có thể do đối tác đang bảo trì hoặc hết hàng). Vui lòng liên hệ Admin qua Zalo: <b><a href="https://zalo.me/0569847809">0569847809</a></b> để được hỗ trợ mua trực tiếp.\n\n💰 Hệ thống đã hoàn lại <b>${formatMoney(order.totalPrice)}</b> vào số dư ví của bạn.`;
             
             return ctx.reply(textMsg, { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[Markup.button.callback('⬅️ Quay lại Menu', 'menu_products')]] }});
         }

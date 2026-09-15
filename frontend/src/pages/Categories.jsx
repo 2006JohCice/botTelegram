@@ -240,14 +240,7 @@ const Categories = () => {
         )}
       </div>
 
-      <div className="glass-panel" style={{ padding: '24px', marginBottom: '24px' }}>
-        <DataTableTools 
-          searchPlaceholder="Tìm kiếm danh mục..."
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-        />
-        
-        <div style={{ overflowX: 'auto' }}>
+      <div className="glass-panel" style={{ padding: '24px', marginBottom: '32px', position: 'relative', zIndex: 10 }}>
         <h3 className="text-h3" style={{ color: 'var(--primary)' }}>Thêm Danh Mục Mới</h3>
         <form onSubmit={handleAddCategory} style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
           <div style={{ flex: 2, minWidth: '200px' }}>
@@ -280,7 +273,13 @@ const Categories = () => {
       </div>
 
       <div className="glass-panel" style={{ padding: '24px' }}>
-        <div style={{ overflowX: 'auto' }}>
+        <DataTableTools 
+          searchPlaceholder="Tìm kiếm danh mục..."
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+        />
+        
+        <div style={{ overflowX: 'auto', marginTop: '16px' }}>
           <table className="data-table">
             <thead>
               <tr>
@@ -349,37 +348,7 @@ const Categories = () => {
         />
       </div>
 
-      <div className="glass-panel" style={{ padding: '24px', marginBottom: '32px', position: 'relative', zIndex: 10 }}>
-        <h3 className="text-h3" style={{ color: 'var(--primary)' }}>Thêm Danh Mục Mới</h3>
-        <form onSubmit={handleAddCategory} style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-          <div style={{ flex: 2, minWidth: '200px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '8px', color: 'var(--text-muted)' }}>Tên danh mục</label>
-            <input type="text" className="input-field" placeholder="VD: Netflix Premium" value={name} onChange={e => setName(e.target.value)} required />
-          </div>
-          
-          <div style={{ flex: 1, minWidth: '150px', position: 'relative' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '8px', color: 'var(--text-muted)' }}>Biểu tượng</label>
-            <div 
-              onClick={() => setShowIconPicker(!showIconPicker)}
-              style={{ padding: '11px', background: 'white', border: '1px solid var(--border-color)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', cursor: 'pointer', transition: 'all 0.2s', width: '45px', boxSizing: 'border-box' }}
-            >
-              {getIconComponent(icon)}
-            </div>
-            <IconPickerPopover show={showIconPicker} onSelect={setIcon} onClose={() => setShowIconPicker(false)} />
-          </div>
 
-          <div style={{ flex: 3, minWidth: '250px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '8px', color: 'var(--text-muted)' }}>Mô tả ngắn</label>
-            <input type="text" className="input-field" placeholder="Dịch vụ giải trí..." value={description} onChange={e => setDescription(e.target.value)} />
-          </div>
-          
-          <div style={{ display: 'flex', alignItems: 'flex-end', height: '65px' }}>
-            <button type="submit" className="btn btn-primary" style={{ padding: '12px 24px' }}>
-              Thêm Mới
-            </button>
-          </div>
-        </form>
-      </div>
 
       {/* Edit Modal */}
       {editId && (
